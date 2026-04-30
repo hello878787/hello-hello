@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>벙커 — 오프라인 모임 플랫폼</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg:        #0a0a0a;
+    --bg2:       #0f0f0f;
+    --bg3:       #141414;
+    --surface:   #111111;
+    --surface2:  #181818;
+
+    --neon:      #F5E000;
+    --neon-dim:  rgba(245,224,0,0.12);
+    --neon-mid:  rgba(245,224,0,0.35);
+    --neon-glow: 0 0 8px #F5E000, 0 0 20px rgba(245,224,0,0.6), 0 0 50px rgba(245,224,0,0.25);
+    --neon-glow-sm: 0 0 4px #F5E000, 0 0 12px rgba(245,224,0,0.5);
+    --neon-glow-lg: 0 0 12px #F5E000, 0 0 30px rgba(245,224,0,0.7), 0 0 80px rgba(245,224,0,0.3);
+
+    --neon-green: #00FF94;
+    --neon-red:   #FF3B5C;
+    --neon-blue:  #00C8FF;
+
+    --ink:       #FFFFFF;
+    --ink-2:     rgba(255,255,255,0.65);
+    --ink-3:     rgba(255,255,255,0.35);
+
+    --border:    rgba(245,224,0,0.2);
+    --border-dim: rgba(255,255,255,0.07);
+
+    --radius:    12px;
+    --radius-sm: 6px;
+    --nav-h:     64px;
+
+    --font:      'Noto Sans KR', sans-serif;
+    --font-mono: 'Share Tech Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    font-size: 15px;
+    min-height: 100vh;
+    cursor: default;
+  }
+
+  /* Neon scanline overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 9999;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* Corner border frame like the image */
+  body::after {
+    content: '';
+    position: fixed; inset: 10px; z-index: 9998;
+    border: 1px solid rgba(245,224,0,0.15);
+    pointer-events: none;
+    border-radius: 4px;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 2px; box-shadow: var(--neon-glow-sm); }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    height: var(--nav-h);
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 30px rgba(245,224,0,0.08);
+  }
+  .nav-inner {
+    max-width: 1200px; width: 100%; margin: 0 auto;
+    padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    height: 100%;
+  }
+  .nav-logo {
+    font-family: var(--font-mono);
+    font-size: 20px; font-weight: 700;
+    color: var(--neon);
+    text-shadow: var(--neon-glow-sm);
+    text-decoration: none;
+    letter-spacing: 2px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-logo-mark {
+    width: 30px; height: 30px;
+    border: 2px solid var(--neon);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    box-shadow: var(--neon-glow-sm), inset 0 0 8px rgba(245,224,0,0.1);
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+  @keyframes logoPulse {
+    0%,100% { box-shadow: var(--neon-glow-sm), inset 0 0 8px rgba(245,224,0,0.1); }
+    50%      { box-shadow: var(--neon-glow), inset 0 0 16px rgba(245,224,0,0.2); }
+  }
+
+  .nav-tabs {
+    display: flex; gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .nav-tab {
+    padding: 8px 18px;
+    font-size: 13px; font-weight: 500; font-family: var(--font);
+    color: var(--ink-3);
+    cursor: pointer; border: none;
+    background: transparent;
+    border-right: 1px solid var(--border);
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+  }
+  .nav-tab:last-child { border-right: none; }
+  .nav-tab:hover { color: var(--neon); background: var(--neon-dim); }
+  .nav-tab.active {
+    color: var(--bg);
+    background: var(--neon);
+    font-weight: 700;
+    text-shadow: none;
+  }
+
+  .nav-right { display: flex; gap: 10px; align-items: center; }
+
+  .btn-sm {
+    padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s ease; font-family: var(--font);
+  }
+  .btn-ghost {
+    background: transparent; color: var(--ink-2);
+    border: 1px solid var(--border-dim);
+  }
+  .btn-ghost:hover { border-color: var(--border); color: var(--ink); }
+  .btn-primary {
+    background: var(--neon); color: var(--bg);
+    border: none; font-weight: 700;
+    box-shadow: var(--neon-glow-sm);
+  }
+  .btn-primary:hover {
+    box-shadow: var(--neon-glow);
+    transform: translateY(-1px);
+  }
+
+  .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+  .hamburger span { display: block; width: 22px; height: 2px; background: var(--neon); border-radius: 2px; box-shadow: var(--neon-glow-sm); }
+
+  /* ── PAGES ── */
+  .page { display: none; padding-top: var(--nav-h); min-height: 100vh; animation: fadeUp 0.3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── BANNER ── */
+  .banner {
+    background: var(--neon);
+    color: var(--bg);
+    padding: 10px 20px;
+    text-align: center; font-size: 13px; font-weight: 700;
+    position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 90;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 20px rgba(245,224,0,0.4);
+  }
+  .banner-close { margin-left: 16px; cursor: pointer; opacity: 0.7; font-size: 18px; line-height: 1; }
+  .banner-close:hover { opacity: 1; }
+  body.banner-on .page { padding-top: calc(var(--nav-h) + 40px); }
+
+  /* ── NEON LINE DIVIDER ── */
+  .neon-line {
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon), transparent);
+    box-shadow: 0 0 8px rgba(245,224,0,0.5);
+    margin: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 70px 24px 60px;
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+    position: relative;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border);
+    color: var(--neon); padding: 5px 14px;
+    border-radius: 2px; font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; margin-bottom: 20px;
+    font-family: var(--font-mono);
+    box-shadow: var(--neon-glow-sm);
+    text-transform: uppercase;
+    animation: eyebrowPulse 2s ease-in-out infinite;
+  }
+  @keyframes eyebrowPulse {
+    0%,100% { box-shadow: var(--neon-glow-sm); }
+    50%      { box-shadow: var(--neon-glow); }
+  }
+  .hero h1 {
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: 900; line-height: 1.1;
+    letter-spacing: -1px; margin-bottom: 16px;
+    color: var(--ink);
+  }
+  .hero h1 em {
+    font-style: normal; color: var(--neon);
+    text-shadow: var(--neon-glow);
+  }
+  .hero p { font-size: 15px; color: var(--ink-2); margin-bottom: 32px; line-height: 1.8; }
+
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn-lg {
+    padding: 14px 28px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s ease; font-family: var(--font); letter-spacing: 0.3px;
+  }
+  .btn-lg.btn-primary { background: var(--neon); color: var(--bg); border: none; box-shadow: var(--neon-glow-sm); }
+  .btn-lg.btn-primary:hover { box-shadow: var(--neon-glow-lg); transform: translateY(-2px); }
+  .btn-lg.btn-outline {
+    background: transparent; color: var(--neon);
+    border: 1px solid var(--neon);
+    box-shadow: inset 0 0 0 0 var(--neon);
+  }
+  .btn-lg.btn-outline:hover {
+    background: var(--neon-dim);
+    box-shadow: var(--neon-glow-sm);
+  }
+
+  /* Stats grid */
+  .hero-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .stat-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 18px 14px; text-align: center;
+    transition: all 0.2s ease;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon), transparent);
+    opacity: 0; transition: opacity 0.2s ease;
+  }
+  .stat-card:hover { border-color: var(--neon); background: var(--surface2); }
+  .stat-card:hover::before { opacity: 1; }
+  .stat-num { font-family: var(--font-mono); font-size: 26px; font-weight: 700; color: var(--neon); text-shadow: var(--neon-glow-sm); }
+  .stat-label { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-weight: 500; letter-spacing: 0.5px; }
+
+  /* ── SECTION ── */
+  .section { padding: 48px 0; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .section-title {
+    font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::before {
+    content: '';
+    display: inline-block; width: 3px; height: 20px;
+    background: var(--neon);
+    box-shadow: var(--neon-glow-sm);
+    border-radius: 2px;
+  }
+  .section-title small { font-size: 12px; color: var(--ink-3); font-weight: 400; font-family: var(--font-mono); }
+  .link-more {
+    font-size: 12px; color: var(--neon); font-weight: 700; cursor: pointer;
+    border: none; background: none; font-family: var(--font-mono); letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .link-more:hover { text-shadow: var(--neon-glow-sm); }
+
+  /* ── MEETUP CARDS ── */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+
+  .meetup-card {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius-sm);
+    overflow: hidden; cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .meetup-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    transition: border-color 0.25s ease;
+    pointer-events: none;
+  }
+  .meetup-card:hover { transform: translateY(-4px); background: var(--surface2); }
+  .meetup-card:hover::after { border-color: var(--neon); box-shadow: 0 0 20px rgba(245,224,0,0.15); }
+
+  .card-top-line {
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon), transparent);
+    box-shadow: 0 0 6px rgba(245,224,0,0.5);
+  }
+  .card-header { padding: 18px 18px 12px; }
+  .card-badges { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+
+  .badge {
+    padding: 3px 9px; border-radius: 2px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.8px; font-family: var(--font-mono); text-transform: uppercase;
+  }
+  .badge-open   { background: transparent; color: var(--neon-green); border: 1px solid var(--neon-green); box-shadow: 0 0 6px rgba(0,255,148,0.3); }
+  .badge-full   { background: transparent; color: var(--neon-red); border: 1px solid var(--neon-red); box-shadow: 0 0 6px rgba(255,59,92,0.3); }
+  .badge-closed { background: transparent; color: var(--ink-3); border: 1px solid var(--border-dim); }
+  .badge-hot    { background: transparent; color: var(--neon); border: 1px solid var(--neon); box-shadow: 0 0 8px rgba(245,224,0,0.4); }
+  .badge-new    { background: transparent; color: var(--neon-blue); border: 1px solid var(--neon-blue); box-shadow: 0 0 6px rgba(0,200,255,0.3); }
+
+  .card-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.2px; line-height: 1.4; }
+  .card-meta { display: flex; flex-direction: column; gap: 5px; }
+  .card-meta-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); }
+  .card-meta-row .icon { font-size: 13px; width: 16px; text-align: center; color: var(--neon); opacity: 0.7; }
+
+  .card-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border-dim);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .participants { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); font-family: var(--font-mono); }
+  .avatar-stack { display: flex; }
+  .avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--neon-dim); color: var(--neon);
+    font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+    margin-left: -5px; font-family: var(--font-mono);
+  }
+  .avatar:first-child { margin-left: 0; }
+  .avatar.more { background: var(--surface2); color: var(--ink-3); }
+
+  .progress-wrap { flex: 1; }
+  .progress-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+  .progress-fill.green { background: var(--neon-green); box-shadow: 0 0 6px rgba(0,255,148,0.6); }
+  .progress-fill.amber { background: var(--neon); box-shadow: 0 0 6px rgba(245,224,0,0.6); }
+  .progress-fill.red   { background: var(--neon-red); box-shadow: 0 0 6px rgba(255,59,92,0.6); }
+
+  /* ── RULES CARD ── */
+  .rules-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 36px;
+    position: relative; overflow: hidden;
+    background: var(--surface);
+  }
+  .rules-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon), transparent);
+    box-shadow: 0 0 12px rgba(245,224,0,0.6);
+  }
+  .rules-card::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon), transparent);
+    box-shadow: 0 0 12px rgba(245,224,0,0.6);
+  }
+  .rules-card h3 {
+    font-size: 18px; font-weight: 700; margin-bottom: 24px;
+    color: var(--neon); text-shadow: var(--neon-glow-sm);
+    font-family: var(--font-mono); letter-spacing: 1px; text-transform: uppercase;
+    grid-column: 1 / -1;
+  }
+  .rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .rule-item { display: flex; gap: 14px; }
+  .rule-num {
+    width: 28px; height: 28px; flex-shrink: 0;
+    border: 1px solid var(--neon); border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    color: var(--neon);
+    box-shadow: 0 0 6px rgba(245,224,0,0.3);
+  }
+  .rule-text { font-size: 13px; line-height: 1.7; color: var(--ink-2); }
+  .rule-text strong { color: var(--ink); display: block; margin-bottom: 2px; font-size: 14px; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; align-items: center;
+  }
+  .filter-pill {
+    padding: 6px 14px; border-radius: 2px; font-size: 12px; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border-dim); background: transparent;
+    color: var(--ink-3); transition: all 0.2s ease; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .filter-pill.active { border-color: var(--neon); color: var(--neon); box-shadow: 0 0 8px rgba(245,224,0,0.2); }
+  .filter-pill:hover:not(.active) { border-color: var(--border); color: var(--ink-2); }
+  .filter-select {
+    padding: 7px 28px 7px 12px; border-radius: 2px;
+    border: 1px solid var(--border-dim); background: var(--surface);
+    font-family: var(--font-mono); font-size: 12px; color: var(--ink-2);
+    cursor: pointer; outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23F5E000'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    margin-left: auto;
+  }
+  .filter-select:focus { border-color: var(--border); }
+
+  /* ── DETAIL PAGE ── */
+  .detail-layout { display: grid; grid-template-columns: 1fr 320px; gap: 28px; padding: 40px 0; }
+  .detail-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--neon); font-size: 12px; font-family: var(--font-mono); font-weight: 700;
+    cursor: pointer; border: none; background: none; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 24px;
+    transition: text-shadow 0.2s;
+  }
+  .detail-back:hover { text-shadow: var(--neon-glow-sm); }
+  .detail-title { font-size: 30px; font-weight: 900; letter-spacing: -0.8px; margin-bottom: 18px; }
+  .detail-meta { display: flex; flex-direction: column; gap: 9px; }
+  .detail-meta-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); font-family: var(--font-mono); }
+  .detail-meta-row strong { color: var(--neon); font-weight: 700; min-width: 60px; }
+  .meta-icon { font-size: 14px; width: 18px; text-align: center; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius-sm);
+    padding: 22px; margin-bottom: 16px;
+    position: relative;
+  }
+  .panel-neon-top::before {
+    content: '';
+    position: absolute; top: 0; left: 20%; right: 20%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon), transparent);
+    box-shadow: 0 0 8px rgba(245,224,0,0.4);
+  }
+  .panel-title {
+    font-size: 13px; font-weight: 700; margin-bottom: 16px;
+    color: var(--neon); font-family: var(--font-mono); letter-spacing: 1.5px;
+    text-transform: uppercase; display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title .count {
+    font-size: 11px; background: var(--neon-dim); color: var(--neon);
+    padding: 1px 8px; border-radius: 2px; border: 1px solid var(--border);
+  }
+  .panel-body-text { font-size: 14px; color: var(--ink-2); line-height: 1.85; }
+
+  /* Attend panel */
+  .attend-panel { border-color: var(--border); background: var(--surface2); }
+  .cost-label { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); letter-spacing: 1px; text-transform: uppercase; }
+  .cost-amount { font-family: var(--font-mono); font-size: 38px; font-weight: 700; color: var(--neon); text-shadow: var(--neon-glow); margin: 6px 0 2px; }
+  .cost-note { font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); margin-bottom: 18px; }
+  .btn-attend {
+    width: 100%; padding: 14px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700;
+    background: var(--neon); color: var(--bg); border: none; cursor: pointer; font-family: var(--font);
+    transition: all 0.2s ease; letter-spacing: 0.5px;
+    box-shadow: var(--neon-glow-sm);
+  }
+  .btn-attend:hover { box-shadow: var(--neon-glow-lg); transform: translateY(-1px); }
+  .btn-attend.attending { background: transparent; color: var(--neon-green); border: 1px solid var(--neon-green); box-shadow: 0 0 12px rgba(0,255,148,0.4); }
+  .deadline-info { font-size: 11px; color: var(--ink-3); text-align: center; margin-top: 12px; font-family: var(--font-mono); }
+
+  /* Participants */
+  .participant-list { display: flex; flex-direction: column; gap: 0; }
+  .participant-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border-dim);
+  }
+  .participant-row:last-child { border-bottom: none; }
+  .p-avatar {
+    width: 34px; height: 34px; border-radius: 2px;
+    background: var(--neon-dim); color: var(--neon);
+    font-size: 13px; font-weight: 700; font-family: var(--font-mono);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .p-name { font-size: 14px; font-weight: 600; }
+  .p-status { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); }
+  .p-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 2px; font-family: var(--font-mono); letter-spacing: 0.5px; }
+
+  /* Comments */
+  .comment-list { display: flex; flex-direction: column; gap: 14px; }
+  .comment { display: flex; gap: 12px; }
+  .c-avatar {
+    width: 30px; height: 30px; border-radius: 2px;
+    background: var(--surface2); color: var(--ink-3);
+    font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border-dim); flex-shrink: 0;
+  }
+  .c-name { font-size: 13px; font-weight: 700; color: var(--neon); font-family: var(--font-mono); }
+  .c-time { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); }
+  .c-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .c-text { font-size: 13px; color: var(--ink-2); line-height: 1.7; }
+  .comment-input { display: flex; gap: 8px; margin-top: 16px; }
+  .comment-input input {
+    flex: 1; padding: 10px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-dim); background: var(--bg);
+    font-family: var(--font-mono); font-size: 13px; color: var(--ink); outline: none;
+    transition: border-color 0.2s;
+  }
+  .comment-input input:focus { border-color: var(--neon); box-shadow: 0 0 0 2px rgba(245,224,0,0.1); }
+  .comment-input button {
+    padding: 10px 16px; border-radius: var(--radius-sm); background: var(--neon);
+    color: var(--bg); border: none; font-weight: 700; cursor: pointer;
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.5px;
+    transition: all 0.2s; box-shadow: var(--neon-glow-sm);
+  }
+  .comment-input button:hover { box-shadow: var(--neon-glow); }
+
+  /* Settlement panel */
+  .settle-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border-dim);
+    font-size: 13px;
+  }
+  .settle-row:last-child { border-bottom: none; }
+  .settle-label { color: var(--ink-3); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .settle-val { font-family: var(--font-mono); font-weight: 700; font-size: 14px; }
+  .settle-val.green { color: var(--neon-green); }
+  .settle-val.amber { color: var(--neon); }
+  .settle-val.total { color: var(--neon); font-size: 18px; text-shadow: var(--neon-glow-sm); }
+
+  /* ── CREATE FORM ── */
+  .form-layout { max-width: 700px; margin: 0 auto; padding: 40px 0; }
+  .form-title { font-size: 28px; font-weight: 900; letter-spacing: -0.8px; margin-bottom: 6px; }
+  .form-title em { font-style: normal; color: var(--neon); text-shadow: var(--neon-glow-sm); }
+  .form-sub { font-size: 13px; color: var(--ink-3); margin-bottom: 36px; font-family: var(--font-mono); }
+  .form-group { margin-bottom: 20px; }
+  .form-label { font-size: 11px; font-weight: 700; color: var(--neon); margin-bottom: 8px; display: block; font-family: var(--font-mono); letter-spacing: 1.5px; text-transform: uppercase; }
+  .form-label .req { color: var(--neon-red); margin-left: 3px; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%; padding: 11px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-dim); background: var(--surface);
+    font-family: var(--font-mono); font-size: 13px; color: var(--ink); outline: none;
+    transition: all 0.2s ease; appearance: none;
+  }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--ink-3); }
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    border-color: var(--neon);
+    box-shadow: 0 0 0 2px rgba(245,224,0,0.1), 0 0 12px rgba(245,224,0,0.08);
+  }
+  .form-textarea { min-height: 100px; resize: vertical; line-height: 1.7; font-family: var(--font); font-size: 14px; }
+  .form-hint { font-size: 11px; color: var(--ink-3); margin-top: 6px; font-family: var(--font-mono); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-section-title {
+    font-size: 11px; font-weight: 700; color: var(--neon); font-family: var(--font-mono);
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .form-section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+
+  .warning-box {
+    border: 1px solid rgba(255,59,92,0.4);
+    background: rgba(255,59,92,0.05);
+    border-radius: var(--radius-sm); padding: 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+    margin-bottom: 24px;
+  }
+  .warning-box p { font-size: 13px; color: var(--ink-2); line-height: 1.7; font-family: var(--font-mono); }
+  .warning-box strong { color: var(--neon-red); display: block; margin-bottom: 4px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .submit-row { display: flex; gap: 12px; margin-top: 32px; }
+  .btn-cancel {
+    padding: 13px 24px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700;
+    background: transparent; color: var(--ink-2); border: 1px solid var(--border-dim);
+    cursor: pointer; font-family: var(--font-mono); transition: all 0.2s; letter-spacing: 0.5px;
+  }
+  .btn-cancel:hover { border-color: var(--border); color: var(--ink); }
+  .btn-submit {
+    flex: 1; padding: 13px 24px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700;
+    background: var(--neon); color: var(--bg); border: none;
+    cursor: pointer; font-family: var(--font); transition: all 0.2s;
+    box-shadow: var(--neon-glow-sm); letter-spacing: 0.5px;
+  }
+  .btn-submit:hover { box-shadow: var(--neon-glow); transform: translateY(-1px); }
+
+  /* ── MY PAGE ── */
+  .mypage-layout { display: grid; grid-template-columns: 220px 1fr; gap: 24px; padding: 40px 0; }
+  .user-card {
+    border: 1px solid var(--border);
+    background: var(--surface); border-radius: var(--radius-sm);
+    padding: 24px; text-align: center; margin-bottom: 12px;
+    position: relative; overflow: hidden;
+  }
+  .user-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon), transparent);
+    box-shadow: 0 0 10px rgba(245,224,0,0.5);
+  }
+  .user-avatar {
+    width: 70px; height: 70px; border-radius: 2px;
+    border: 2px solid var(--neon);
+    background: var(--neon-dim); color: var(--neon);
+    font-size: 26px; font-weight: 900; font-family: var(--font-mono);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    box-shadow: var(--neon-glow-sm);
+    animation: avatarPulse 3s ease-in-out infinite;
+  }
+  @keyframes avatarPulse {
+    0%,100% { box-shadow: var(--neon-glow-sm); }
+    50%      { box-shadow: var(--neon-glow); }
+  }
+  .user-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .user-handle { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); margin-bottom: 12px; letter-spacing: 0.5px; }
+  .user-level {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: 2px; font-size: 11px; font-weight: 700;
+    font-family: var(--font-mono); letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .level-active { border: 1px solid var(--neon-green); color: var(--neon-green); box-shadow: 0 0 6px rgba(0,255,148,0.3); }
+  .level-new    { border: 1px solid var(--neon-blue); color: var(--neon-blue); box-shadow: 0 0 6px rgba(0,200,255,0.3); }
+
+  .sidebar-nav { border: 1px solid var(--border-dim); border-radius: var(--radius-sm); overflow: hidden; }
+  .sidebar-nav-item {
+    padding: 12px 16px; font-size: 12px; font-weight: 700; color: var(--ink-3);
+    cursor: pointer; border-bottom: 1px solid var(--border-dim);
+    display: flex; align-items: center; gap: 10px; transition: all 0.2s;
+    font-family: var(--font-mono); letter-spacing: 0.5px;
+  }
+  .sidebar-nav-item:last-child { border-bottom: none; }
+  .sidebar-nav-item:hover { color: var(--ink); background: var(--surface2); }
+  .sidebar-nav-item.active { color: var(--neon); background: var(--neon-dim); border-left: 2px solid var(--neon); }
+
+  .tab-content { display: none; animation: fadeUp 0.2s ease; }
+  .tab-content.active { display: block; }
+
+  .info-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+  .info-box {
+    border: 1px solid var(--border-dim); border-radius: var(--radius-sm);
+    background: var(--surface); padding: 16px; text-align: center;
+    transition: border-color 0.2s;
+  }
+  .info-box:hover { border-color: var(--border); }
+  .info-num { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--neon); text-shadow: var(--neon-glow-sm); }
+  .info-label { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-family: var(--font-mono); letter-spacing: 0.5px; }
+
+  .history-list { display: flex; flex-direction: column; gap: 10px; }
+  .history-item {
+    background: var(--surface); border: 1px solid var(--border-dim);
+    border-radius: var(--radius-sm); padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: border-color 0.2s;
+  }
+  .history-item:hover { border-color: var(--border); }
+  .history-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .history-date { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); }
+  .history-amount { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--neon); }
+  .tag-paid    { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 2px; border: 1px solid var(--neon-green); color: var(--neon-green); font-family: var(--font-mono); }
+  .tag-pending { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 2px; border: 1px solid var(--neon); color: var(--neon); font-family: var(--font-mono); }
+
+  /* ── ADMIN ── */
+  .admin-layout { padding: 40px 0; }
+  .admin-title { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .admin-title em { font-style: normal; color: var(--neon); text-shadow: var(--neon-glow-sm); }
+  .admin-sub { font-size: 12px; color: var(--ink-3); margin-bottom: 28px; font-family: var(--font-mono); }
+
+  .admin-summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+
+  .admin-tabs { display: flex; border-bottom: 1px solid var(--border-dim); margin-bottom: 24px; }
+  .admin-tab {
+    padding: 10px 20px; font-size: 12px; font-weight: 700; font-family: var(--font-mono);
+    cursor: pointer; border: none; background: transparent; color: var(--ink-3);
+    transition: all 0.2s; letter-spacing: 1px; text-transform: uppercase;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .admin-tab:hover { color: var(--ink-2); }
+  .admin-tab.active { color: var(--neon); border-bottom-color: var(--neon); text-shadow: var(--neon-glow-sm); }
+
+  .admin-tab-content { display: none; animation: fadeUp 0.2s ease; }
+  .admin-tab-content.active { display: block; }
+
+  .data-table { border: 1px solid var(--border-dim); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
+  .table-head {
+    display: grid; padding: 11px 16px;
+    background: var(--surface2); border-bottom: 1px solid var(--border-dim);
+    font-size: 10px; font-weight: 700; color: var(--neon); font-family: var(--font-mono);
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .table-row {
+    display: grid; padding: 13px 16px;
+    border-bottom: 1px solid var(--border-dim); align-items: center;
+    transition: background 0.15s;
+  }
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: var(--surface2); }
+  .users-grid     { grid-template-columns: 36px 2fr 1.5fr 1fr 1fr 110px; }
+  .reports-grid   { grid-template-columns: 2fr 1.5fr 1fr 1fr 130px; }
+  .inactivity-grid { grid-template-columns: 2fr 1.5fr 1fr 1fr 140px; }
+
+  .table-avatar {
+    width: 28px; height: 28px; border-radius: 2px;
+    background: var(--neon-dim); color: var(--neon);
+    font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+  }
+  .warn-badge { padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.5px; }
+  .warn-0   { border: 1px solid var(--neon-green); color: var(--neon-green); }
+  .warn-1   { border: 1px solid var(--neon); color: var(--neon); }
+  .warn-2   { border: 1px solid var(--neon-red); color: var(--neon-red); }
+  .warn-ban { border: 1px solid var(--ink-3); color: var(--ink-3); }
+
+  .table-actions { display: flex; gap: 5px; }
+  .action-btn {
+    padding: 4px 9px; border-radius: 2px; font-size: 10px; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border-dim); background: transparent;
+    color: var(--ink-3); transition: all 0.15s; font-family: var(--font-mono); letter-spacing: 0.3px;
+  }
+  .action-btn:hover    { border-color: var(--border); color: var(--ink); }
+  .action-btn.warn     { border-color: rgba(245,224,0,0.4); color: var(--neon); }
+  .action-btn.warn:hover { background: var(--neon-dim); box-shadow: 0 0 6px rgba(245,224,0,0.2); }
+  .action-btn.ban      { border-color: rgba(255,59,92,0.4); color: var(--neon-red); }
+  .action-btn.ban:hover { background: rgba(255,59,92,0.08); }
+  .action-btn.resolve  { border-color: rgba(0,255,148,0.4); color: var(--neon-green); }
+  .action-btn.resolve:hover { background: rgba(0,255,148,0.08); }
+
+  /* ── TOAST ── */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast {
+    background: var(--surface2); color: var(--ink);
+    padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    animation: slideInR 0.3s ease, fadeOut 0.4s ease 2.6s forwards;
+    pointer-events: all;
+    display: flex; align-items: center; gap: 10px;
+    max-width: 320px; font-family: var(--font-mono);
+  }
+  .toast.success { border-left: 2px solid var(--neon-green); }
+  .toast.error   { border-left: 2px solid var(--neon-red); }
+  .toast.info    { border-left: 2px solid var(--neon); box-shadow: 0 4px 30px rgba(0,0,0,0.5), 0 0 20px rgba(245,224,0,0.1); }
+  @keyframes slideInR { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes fadeOut  { to { opacity:0; transform:translateY(8px); } }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 28px; max-width: 420px; width: 100%;
+    box-shadow: var(--neon-glow-sm), 0 20px 60px rgba(0,0,0,0.8);
+    animation: scaleIn 0.2s ease;
+    position: relative;
+  }
+  .modal::before {
+    content: '';
+    position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon), transparent);
+    box-shadow: 0 0 8px rgba(245,224,0,0.5);
+  }
+  @keyframes scaleIn { from { transform:scale(0.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; color: var(--neon); font-family: var(--font-mono); letter-spacing: 1px; text-transform: uppercase; }
+  .modal-body  { font-size: 14px; color: var(--ink-2); line-height: 1.7; margin-bottom: 22px; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions .btn-cancel  { flex: 1; }
+  .modal-actions .btn-submit  { flex: 1; padding: 11px; font-size: 13px; }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center; padding: 60px 20px;
+    border: 1px dashed var(--border-dim); border-radius: var(--radius-sm);
+  }
+  .empty-icon  { font-size: 36px; margin-bottom: 14px; opacity: 0.5; }
+  .empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--ink-2); }
+  .empty-text  { font-size: 13px; color: var(--ink-3); font-family: var(--font-mono); margin-bottom: 18px; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border-dim);
+    margin-top: 60px; padding: 28px 24px;
+    font-size: 12px; color: var(--ink-3); font-family: var(--font-mono);
+  }
+  .footer-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .footer-logo { color: var(--neon); font-weight: 700; font-size: 15px; letter-spacing: 2px; text-shadow: var(--neon-glow-sm); }
+  .footer-links { display: flex; gap: 18px; }
+  .footer-links a { color: var(--ink-3); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--neon); text-shadow: var(--neon-glow-sm); }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .nav-tabs { display: none; }
+    .hamburger { display: flex; }
+    .hero { grid-template-columns: 1fr; gap: 32px; padding: 30px 20px 40px; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .rules-grid { grid-template-columns: 1fr; }
+    .detail-layout { grid-template-columns: 1fr; }
+    .mypage-layout { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr 1fr; }
+    .admin-summary { grid-template-columns: 1fr 1fr; }
+    .nav-right .btn-ghost { display: none; }
+    .footer-links { display: none; }
+    .admin-tabs { overflow-x: auto; }
+    .users-grid    { grid-template-columns: 2fr 1fr 90px; }
+    .users-grid > *:nth-child(3), .users-grid > *:nth-child(4) { display: none; }
+    .reports-grid  { grid-template-columns: 2fr 1fr 100px; }
+    .reports-grid > *:nth-child(2), .reports-grid > *:nth-child(4) { display: none; }
+    .inactivity-grid { grid-template-columns: 2fr 1fr 130px; }
+    .inactivity-grid > *:nth-child(3), .inactivity-grid > *:nth-child(4) { display: none; }
+  }
+
+  /* ── MOBILE DRAWER ── */
+  .mobile-menu {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg); z-index: 150; padding: 24px;
+    display: none; flex-direction: column; gap: 4px;
+    border-right: 1px solid var(--border);
+    animation: slideInLeft 0.25s ease;
+  }
+  @keyframes slideInLeft { from { transform:translateX(-100%); } to { transform:translateX(0); } }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .mobile-menu-close { font-size: 22px; cursor: pointer; color: var(--neon); background: none; border: none; font-family: var(--font-mono); }
+  .mobile-nav-item {
+    padding: 13px 14px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700;
+    color: var(--ink-3); cursor: pointer; border: none; background: none;
+    text-align: left; transition: all 0.2s; font-family: var(--font-mono);
+    letter-spacing: 0.5px; border: 1px solid transparent;
+  }
+  .mobile-nav-item:hover { color: var(--neon); background: var(--neon-dim); border-color: var(--border); }
+  .mobile-nav-item.active { color: var(--neon); border-color: var(--border); background: var(--neon-dim); text-shadow: var(--neon-glow-sm); }
+
+  /* Neon glitch blink on logo */
+  @keyframes glitch {
+    0%,90%,100% { opacity:1; }
+    92% { opacity:0; }
+    94% { opacity:1; }
+    96% { opacity:0; }
+    98% { opacity:1; }
+  }
+  .nav-logo { animation: glitch 8s infinite; }
+</style>
+</head>
+<body class="banner-on">
+
+<!-- BANNER -->
+<div class="banner" id="banner">
+  <span>⚡</span>
+  <span>커뮤니티 규칙: 무단 불참 → 경고 누적 → 강퇴 &nbsp;|&nbsp; 정산은 벙 종료 후 24시간 이내 완료 필수</span>
+  <span class="banner-close" onclick="closeBanner()">×</span>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo" onclick="showPage('home')">
+      <div class="nav-logo-mark">B</div>
+      벙커
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('home')">홈</button>
+      <button class="nav-tab" onclick="showPage('list')">벙 목록</button>
+      <button class="nav-tab" onclick="showPage('create')">벙 만들기</button>
+      <button class="nav-tab" onclick="showPage('mypage')">마이페이지</button>
+      <button class="nav-tab" onclick="showPage('admin')">관리자</button>
+    </div>
+    <div class="nav-right">
+      <button class="btn-sm btn-ghost" onclick="showPage('mypage')">로그인</button>
+      <button class="btn-sm btn-primary" onclick="showPage('create')">+ 벙 만들기</button>
+      <div class="hamburger" onclick="openMobileMenu()"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu-header">
+    <div class="nav-logo"><div class="nav-logo-mark">B</div>벙커</div>
+    <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+  </div>
+  <button class="mobile-nav-item active" onclick="showPage('home');closeMobileMenu()">[ 홈 ]</button>
+  <button class="mobile-nav-item" onclick="showPage('list');closeMobileMenu()">[ 벙 목록 ]</button>
+  <button class="mobile-nav-item" onclick="showPage('create');closeMobileMenu()">[ 벙 만들기 ]</button>
+  <button class="mobile-nav-item" onclick="showPage('mypage');closeMobileMenu()">[ 마이페이지 ]</button>
+  <button class="mobile-nav-item" onclick="showPage('admin');closeMobileMenu()">[ 관리자 ]</button>
+</div>
+
+<!-- ████ HOME ████ -->
+<div class="page active" id="page-home">
+  <div class="container">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div>
+        <div class="hero-eyebrow">⚡ offline community platform</div>
+        <h1>진짜 <em>사람들</em>과<br>만나는 공간</h1>
+        <p>관심사 기반 오프라인 모임, 벙.<br>공정한 정산과 신뢰 기반의 커뮤니티로<br>의미 있는 만남을 만들어 가세요.</p>
+        <div class="hero-actions">
+          <button class="btn-lg btn-primary" onclick="showPage('list')">벙 둘러보기</button>
+          <button class="btn-lg btn-outline" onclick="showPage('create')">벙 만들기</button>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-card"><div class="stat-num">247</div><div class="stat-label">TOTAL BUNG</div></div>
+        <div class="stat-card"><div class="stat-num">1.2K</div><div class="stat-label">MEMBERS</div></div>
+        <div class="stat-card"><div class="stat-num">98%</div><div class="stat-label">SETTLE RATE</div></div>
+        <div class="stat-card"><div class="stat-num">12</div><div class="stat-label">THIS WEEK</div></div>
+        <div class="stat-card"><div class="stat-num">4.8</div><div class="stat-label">AVG RATING</div></div>
+        <div class="stat-card"><div class="stat-num">0</div><div class="stat-label">DISPUTES</div></div>
+      </div>
+    </div>
+
+    <div class="neon-line"></div>
+
+    <!-- Popular -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">인기 벙 <small>// HOT_NOW</small></div>
+        <button class="link-more" onclick="showPage('list')">VIEW ALL →</button>
+      </div>
+      <div class="cards-grid">
+
+        <div class="meetup-card" onclick="showPage('detail')">
+          <div class="card-top-line"></div>
+          <div class="card-header">
+            <div class="card-badges"><span class="badge badge-hot">HOT</span><span class="badge badge-open">OPEN</span></div>
+            <div class="card-title">한강 치맥 벙 🍺🍗</div>
+            <div class="card-meta">
+              <div class="card-meta-row"><span class="icon">📅</span>2026.05.10 (SAT) 18:00</div>
+              <div class="card-meta-row"><span class="icon">📍</span>여의도 한강공원 3번 매점 앞</div>
+              <div class="card-meta-row"><span class="icon">💰</span>약 ₩15,000 / 인</div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="participants">
+              <div class="avatar-stack"><div class="avatar">김</div><div class="avatar">이</div><div class="avatar">박</div><div class="avatar more">+5</div></div>
+              <span>8/12</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill amber" style="width:67%"></div></div></div>
+          </div>
+        </div>
+
+        <div class="meetup-card" onclick="showPage('detail')">
+          <div class="card-top-line" style="background:linear-gradient(90deg,var(--neon-green),transparent);box-shadow:0 0 6px rgba(0,255,148,0.5)"></div>
+          <div class="card-header">
+            <div class="card-badges"><span class="badge badge-open">OPEN</span></div>
+            <div class="card-title">보드게임 카페 초고수 모집 🎲</div>
+            <div class="card-meta">
+              <div class="card-meta-row"><span class="icon">📅</span>2026.05.08 (THU) 19:00</div>
+              <div class="card-meta-row"><span class="icon">📍</span>홍대 게임 카페 플레이스</div>
+              <div class="card-meta-row"><span class="icon">💰</span>약 ₩12,000 / 인</div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="participants">
+              <div class="avatar-stack"><div class="avatar">최</div><div class="avatar">정</div><div class="avatar">강</div></div>
+              <span>3/8</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill green" style="width:38%"></div></div></div>
+          </div>
+        </div>
+
+        <div class="meetup-card" onclick="showPage('detail')">
+          <div class="card-top-line" style="background:linear-gradient(90deg,var(--neon-red),transparent);box-shadow:0 0 6px rgba(255,59,92,0.5)"></div>
+          <div class="card-header">
+            <div class="card-badges"><span class="badge badge-full">FULL</span></div>
+            <div class="card-title">북한산 새벽 등산 벙 🏔️</div>
+            <div class="card-meta">
+              <div class="card-meta-row"><span class="icon">📅</span>2026.05.07 (WED) 05:00</div>
+              <div class="card-meta-row"><span class="icon">📍</span>북한산 우이역 1번 출구</div>
+              <div class="card-meta-row"><span class="icon">💰</span>무료 (개인 식대 별도)</div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="participants">
+              <div class="avatar-stack"><div class="avatar">윤</div><div class="avatar">오</div><div class="avatar more">+8</div></div>
+              <span>10/10</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill red" style="width:100%"></div></div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="neon-line"></div>
+
+    <!-- Rules -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">커뮤니티 규칙 <small>// RULES</small></div>
+      </div>
+      <div class="rules-card">
+        <h3>// COMMUNITY_RULES.md — 신뢰와 공정의 기반</h3>
+        <div class="rules-grid">
+          <div class="rule-item"><div class="rule-num">01</div><div class="rule-text"><strong>참여 확정은 출석 버튼으로</strong>관심 있으면 반드시 [출석] 버튼을 눌러 확정하세요. 미확인 인원은 명단에서 제외됩니다.</div></div>
+          <div class="rule-item"><div class="rule-num">02</div><div class="rule-text"><strong>정산 24시간 이내 완료</strong>벙 종료 후 24시간 이내 영수증 또는 이체 증빙 첨부 후 정산 완료 필수.</div></div>
+          <div class="rule-item"><div class="rule-num">03</div><div class="rule-text"><strong>무단 불참 경고제</strong>무단 불참 1회 → 경고 1회. 2회 → 2차 경고. 3회 → 영구 강퇴 처리.</div></div>
+          <div class="rule-item"><div class="rule-num">04</div><div class="rule-text"><strong>2개월 미활동 제한</strong>2개월 이상 활동 없으면 자동 비활성화. 재활성화는 관리자 승인 후 가능.</div></div>
+          <div class="rule-item"><div class="rule-num">05</div><div class="rule-text"><strong>중복 벙 자동 차단</strong>같은 시간/장소 벙 중복 생성 불가. 시스템이 자동으로 감지하여 차단합니다.</div></div>
+          <div class="rule-item"><div class="rule-num">06</div><div class="rule-text"><strong>무단 추가 참여 금지</strong>벙장 승인 없이 비멤버 데려오기 금지. 위반 시 즉시 경고 처리됩니다.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">벙커_BUNGKER</div>
+      <div>© 2026 벙커 커뮤니티. ALL RIGHTS RESERVED.</div>
+      <div class="footer-links">
+        <a href="#">이용약관</a><a href="#">개인정보처리방침</a><a href="#">공지사항</a><a href="#">문의하기</a>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ████ LIST PAGE ████ -->
+<div class="page" id="page-list">
+  <div class="container">
+    <div style="padding:36px 0 20px">
+      <h2 style="font-size:26px;font-weight:900;letter-spacing:-0.8px;margin-bottom:6px">벙 목록 <em style="font-style:normal;color:var(--neon);text-shadow:var(--neon-glow-sm);font-size:20px">// ALL MEETINGS</em></h2>
+      <p style="font-size:12px;color:var(--ink-3);font-family:var(--font-mono)">지금 모집 중인 오프라인 모임을 둘러보세요.</p>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="setFilter(this)">ALL</button>
+      <button class="filter-pill" onclick="setFilter(this)">OPEN</button>
+      <button class="filter-pill" onclick="setFilter(this)">FULL</button>
+      <button class="filter-pill" onclick="setFilter(this)">ENDED</button>
+      <select class="filter-select"><option>DATE ↓</option><option>POPULAR</option><option>NEWEST</option></select>
+      <select class="filter-select" style="margin-left:0"><option>전체 지역</option><option>홍대</option><option>강남</option><option>한강</option></select>
+    </div>
+    <div class="cards-grid">
+      <div class="meetup-card" onclick="showPage('detail')">
+        <div class="card-top-line"></div>
+        <div class="card-header">
+          <div class="card-badges"><span class="badge badge-hot">HOT</span><span class="badge badge-open">OPEN</span></div>
+          <div class="card-title">한강 치맥 벙 🍺🍗</div>
+          <div class="card-meta">
+            <div class="card-meta-row"><span class="icon">📅</span>2026.05.10 (SAT) 18:00</div>
+            <div class="card-meta-row"><span class="icon">📍</span>여의도 한강공원 3번 매점 앞</div>
+            <div class="card-meta-row"><span class="icon">💰</span>약 ₩15,000 / 인</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="participants"><div class="avatar-stack"><div class="avatar">김</div><div class="avatar">이</div><div class="avatar more">+6</div></div><span>8/12</span></div>
+          <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill amber" style="width:67%"></div></div></div>
+        </div>
+      </div>
+      <div class="meetup-card" onclick="showPage('detail')">
+        <div class="card-top-line" style="background:linear-gradient(90deg,var(--neon-green),transparent);box-shadow:0 0 6px rgba(0,255,148,0.5)"></div>
+        <div class="card-header">
+          <div class="card-badges"><span class="badge badge-open">OPEN</span></div>
+          <div class="card-title">보드게임 카페 초고수 모집 🎲</div>
+          <div class="card-meta">
+            <div class="card-meta-row"><span class="icon">📅</span>2026.05.08 (THU) 19:00</div>
+            <div class="card-meta-row"><span class="icon">📍</span>홍대 게임 카페 플레이스</div>
+            <div class="card-meta-row"><span class="icon">💰</span>약 ₩12,000 / 인</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="participants"><div class="avatar-stack"><div class="avatar">최</div><div class="avatar">정</div><div class="avatar">강</div></div><span>3/8</span></div>
+          <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill green" style="width:38%"></div></div></div>
+        </div>
+      </div>
+      <div class="meetup-card" onclick="showPage('detail')">
+        <div class="card-top-line" style="background:linear-gradient(90deg,var(--neon-red),transparent);box-shadow:0 0 6px rgba(255,59,92,0.5)"></div>
+        <div class="card-header">
+          <div class="card-badges"><span class="badge badge-full">FULL</span></div>
+          <div class="card-title">북한산 새벽 등산 벙 🏔️</div>
+          <div class="card-meta">
+            <div class="card-meta-row"><span class="icon">📅</span>2026.05.07 (WED) 05:00</div>
+            <div class="card-meta-row"><span class="icon">📍</span>북한산 우이역 1번 출구</div>
+            <div class="card-meta-row"><span class="icon">💰</span>무료 (개인 식대 별도)</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="participants"><div class="avatar-stack"><div class="avatar">윤</div><div class="avatar more">+9</div></div><span>10/10</span></div>
+          <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill red" style="width:100%"></div></div></div>
+        </div>
+      </div>
+      <div class="meetup-card" onclick="showPage('detail')">
+        <div class="card-top-line" style="background:linear-gradient(90deg,var(--neon-blue),transparent);box-shadow:0 0 6px rgba(0,200,255,0.5)"></div>
+        <div class="card-header">
+          <div class="card-badges"><span class="badge badge-new">NEW</span><span class="badge badge-open">OPEN</span></div>
+          <div class="card-title">강남 오마카세 벙 🍣</div>
+          <div class="card-meta">
+            <div class="card-meta-row"><span class="icon">📅</span>2026.05.15 (FRI) 19:00</div>
+            <div class="card-meta-row"><span class="icon">📍</span>강남역 3번 출구 근처</div>
+            <div class="card-meta-row"><span class="icon">💰</span>약 ₩60,000 / 인</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="participants"><div class="avatar-stack"><div class="avatar">류</div></div><span>1/6</span></div>
+          <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill green" style="width:16%"></div></div></div>
+        </div>
+      </div>
+      <div class="meetup-card" onclick="showPage('detail')">
+        <div class="card-top-line"></div>
+        <div class="card-header">
+          <div class="card-badges"><span class="badge badge-open">OPEN</span></div>
+          <div class="card-title">클라이밍 입문자 모임 🧗</div>
+          <div class="card-meta">
+            <div class="card-meta-row"><span class="icon">📅</span>2026.05.12 (MON) 20:00</div>
+            <div class="card-meta-row"><span class="icon">📍</span>신촌 클라이밍 센터</div>
+            <div class="card-meta-row"><span class="icon">💰</span>약 ₩20,000 / 인</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="participants"><div class="avatar-stack"><div class="avatar">서</div><div class="avatar">조</div><div class="avatar more">+1</div></div><span>3/8</span></div>
+          <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill green" style="width:38%"></div></div></div>
+        </div>
+      </div>
+      <div class="meetup-card" onclick="showPage('detail')">
+        <div class="card-top-line" style="background:linear-gradient(90deg,var(--ink-3),transparent);box-shadow:none"></div>
+        <div class="card-header">
+          <div class="card-badges"><span class="badge badge-closed">ENDED</span></div>
+          <div class="card-title">성수 팝업 스토어 탐방 🛍️</div>
+          <div class="card-meta">
+            <div class="card-meta-row"><span class="icon">📅</span>2026.04.28 (TUE) 15:00</div>
+            <div class="card-meta-row"><span class="icon">📍</span>성수동 일대</div>
+            <div class="card-meta-row"><span class="icon">💰</span>개인 자유</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="participants"><div class="avatar-stack"><div class="avatar">나</div><div class="avatar more">+11</div></div><span>12/12</span></div>
+          <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill red" style="width:100%"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ████ DETAIL PAGE ████ -->
+<div class="page" id="page-detail">
+  <div class="container">
+    <div class="detail-layout">
+      <div>
+        <button class="detail-back" onclick="showPage('list')">← BACK_TO_LIST</button>
+        <div class="card-badges" style="margin-bottom:12px">
+          <span class="badge badge-hot">HOT</span><span class="badge badge-open">OPEN</span>
+        </div>
+        <h1 class="detail-title">한강 치맥 벙 🍺🍗</h1>
+        <div class="detail-meta" style="margin-bottom:28px">
+          <div class="detail-meta-row"><span class="meta-icon">📅</span><strong>DATE</strong>2026.05.10 (SAT) 18:00</div>
+          <div class="detail-meta-row"><span class="meta-icon">📍</span><strong>LOCATION</strong>여의도 한강공원 3번 매점 앞</div>
+          <div class="detail-meta-row"><span class="meta-icon">👤</span><strong>HOST</strong>김철수 (@cheolsu_k)</div>
+          <div class="detail-meta-row"><span class="meta-icon">⏰</span><strong>DEADLINE</strong>2026.05.09 23:59</div>
+        </div>
+
+        <div class="panel panel-neon-top">
+          <div class="panel-title">// 벙 소개</div>
+          <p class="panel-body-text">
+            한강에서 시원한 저녁 바람 맞으며 치킨이랑 맥주 한잔 어떠세요? 🍺<br><br>
+            · 각자 좋아하는 치킨 브랜드 1마리씩 주문 예정<br>
+            · 맥주/음료는 근처 편의점에서 구입<br>
+            · 돗자리 및 개인 컵 지참 권장<br>
+            · 정산은 영수증 합산 후 1/N으로 진행<br><br>
+            <span style="color:var(--neon);font-family:var(--font-mono);font-size:12px">NOTE:</span> 오후 5:30부터 자리 맡으니 조금 일찍 오셔도 됩니다.
+          </p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">// 참가자 <span class="count">8/12</span></div>
+          <div class="participant-list">
+            <div class="participant-row">
+              <div class="p-avatar" style="color:var(--neon);border-color:var(--neon)">김</div>
+              <div style="flex:1"><div class="p-name">김철수 <span style="color:var(--neon);font-size:11px;font-family:var(--font-mono)">[HOST]</span></div><div class="p-status">ACTIVE_MEMBER · 참가 확정</div></div>
+              <span class="p-badge badge-open" style="border:1px solid var(--neon-green);color:var(--neon-green);font-family:var(--font-mono);font-size:10px;padding:2px 8px">CONFIRMED</span>
+            </div>
+            <div class="participant-row">
+              <div class="p-avatar">이</div>
+              <div style="flex:1"><div class="p-name">이민지</div><div class="p-status">ACTIVE_MEMBER · 참가 확정</div></div>
+              <span class="p-badge" style="border:1px solid var(--neon-green);color:var(--neon-green);font-family:var(--font-mono);font-size:10px;padding:2px 8px">CONFIRMED</span>
+            </div>
+            <div class="participant-row">
+              <div class="p-avatar">박</div>
+              <div style="flex:1"><div class="p-name">박준호</div><div class="p-status">NEW_MEMBER · 참가 확정</div></div>
+              <span class="p-badge" style="border:1px solid var(--neon-blue);color:var(--neon-blue);font-family:var(--font-mono);font-size:10px;padding:2px 8px">NEW</span>
+            </div>
+            <div class="participant-row">
+              <div class="p-avatar">최</div>
+              <div style="flex:1"><div class="p-name">최서연</div><div class="p-status">ACTIVE_MEMBER · 참가 확정</div></div>
+              <span class="p-badge" style="border:1px solid var(--neon-green);color:var(--neon-green);font-family:var(--font-mono);font-size:10px;padding:2px 8px">CONFIRMED</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">// 댓글 <span class="count">3</span></div>
+          <div class="comment-list">
+            <div class="comment">
+              <div class="c-avatar" style="background:var(--neon-dim);color:var(--neon);border-color:var(--border)">김</div>
+              <div class="c-body">
+                <div class="c-header"><span class="c-name">김철수</span><span class="c-time">3H_AGO</span></div>
+                <div class="c-text">자리는 제가 미리 가서 맡아 놓을게요! 5:30부터 3번 매점 옆에 있겠습니다 🙋</div>
+              </div>
+            </div>
+            <div class="comment">
+              <div class="c-avatar">이</div>
+              <div class="c-body">
+                <div class="c-header"><span class="c-name">이민지</span><span class="c-time">2H_AGO</span></div>
+                <div class="c-text">교촌치킨 한마리 들고 갈게요 🍗</div>
+              </div>
+            </div>
+            <div class="comment">
+              <div class="c-avatar">박</div>
+              <div class="c-body">
+                <div class="c-header"><span class="c-name">박준호</span><span class="c-time">1H_AGO</span></div>
+                <div class="c-text">처음 참가하는데 잘 부탁드립니다! 돗자리 여분 있어요 😊</div>
+              </div>
+            </div>
+          </div>
+          <div class="comment-input">
+            <input type="text" placeholder="> 댓글 입력..." id="commentInput">
+            <button onclick="addComment()">SEND</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div>
+        <div class="panel attend-panel panel-neon-top">
+          <div class="cost-label">ESTIMATED COST / PERSON</div>
+          <div class="cost-amount" id="costAmount">₩15,000</div>
+          <div class="cost-note">영수증 기준 1/N 정산</div>
+          <button class="btn-attend" id="attendBtn" onclick="toggleAttend()">✋ 출석 확정</button>
+          <div class="deadline-info">DEADLINE: 2026.05.09 23:59</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">// 정산 현황</div>
+          <div>
+            <div class="settle-row"><span class="settle-label">TOTAL_COST</span><span class="settle-val">₩120,000</span></div>
+            <div class="settle-row"><span class="settle-label">PARTICIPANTS</span><span class="settle-val">8명</span></div>
+            <div class="settle-row"><span class="settle-label">SETTLED</span><span class="settle-val green">5명</span></div>
+            <div class="settle-row"><span class="settle-label">PENDING</span><span class="settle-val amber">3명</span></div>
+            <div class="settle-row" style="padding-top:12px"><span class="settle-label" style="color:var(--ink-2);font-weight:700">PER_PERSON</span><span class="settle-val total">₩15,000</span></div>
+          </div>
+          <button class="btn-sm btn-ghost" style="width:100%;margin-top:14px;font-family:var(--font-mono);font-size:11px;letter-spacing:1px" onclick="showToast('정산 증빙을 업로드해주세요', 'info')">📎 UPLOAD_RECEIPT</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">// 주의사항</div>
+          <div style="font-size:12px;color:var(--ink-3);font-family:var(--font-mono);display:flex;flex-direction:column;gap:6px;line-height:1.6">
+            <div>· 마감 후 취소 시 경고 1회</div>
+            <div>· 정산 24시간 이내 완료 필수</div>
+            <div>· 무단 불참 시 즉시 경고</div>
+            <div>· 현장 추가 인원 절대 불가</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ████ CREATE PAGE ████ -->
+<div class="page" id="page-create">
+  <div class="container">
+    <div class="form-layout">
+      <h2 class="form-title">새 벙 <em>만들기</em></h2>
+      <p class="form-sub">> 오프라인 모임을 개설하고 멤버를 모집하세요. 중복 벙은 시스템이 자동 차단합니다.</p>
+
+      <div class="panel panel-neon-top">
+        <div class="form-section-title">기본 정보</div>
+        <div class="form-group">
+          <label class="form-label">벙 제목 <span class="req">*</span></label>
+          <input class="form-input" type="text" placeholder="예: 홍대 보드게임 벙 🎲" maxlength="50">
+          <div class="form-hint">> MAX_LENGTH: 50 CHARS</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">날짜 <span class="req">*</span></label>
+            <input class="form-input" type="date" min="2026-05-01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">시간 <span class="req">*</span></label>
+            <input class="form-input" type="time">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">장소 <span class="req">*</span></label>
+          <input class="form-input" type="text" placeholder="예: 홍대입구역 2번 출구 앞">
+          <div class="form-hint">> 구체적인 집합 장소를 입력하세요</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">벙 소개 <span class="req">*</span></label>
+          <textarea class="form-textarea" placeholder="어떤 모임인지, 준비물, 주의사항 등을 적어주세요..."></textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="form-section-title">참가 설정</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">최대 참가자 <span class="req">*</span></label>
+            <input class="form-input" type="number" min="2" max="50" placeholder="2 ~ 50">
+          </div>
+          <div class="form-group">
+            <label class="form-label">모집 마감일 <span class="req">*</span></label>
+            <input class="form-input" type="date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">예상 비용</label>
+          <input class="form-input" type="text" placeholder="예: 15,000원 또는 무료">
+        </div>
+        <div class="form-group">
+          <label class="form-label">멤버 등급 제한</label>
+          <select class="form-select">
+            <option>전체 멤버 가능</option>
+            <option>활성 멤버만 가능</option>
+            <option>초대된 멤버만 가능</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <span style="font-size:18px">⚠️</span>
+        <div><p><strong>WARNING — 벙 개설 전 확인</strong>같은 시간/장소 중복 벙 자동 차단 · 정산 영수증 보관 의무 · 최소 2명 미달 시 자동 취소</p></div>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn-cancel" onclick="showPage('list')">CANCEL</button>
+        <button class="btn-submit" onclick="createMeetup()">⚡ 벙 개설하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ████ MY PAGE ████ -->
+<div class="page" id="page-mypage">
+  <div class="container">
+    <div class="mypage-layout">
+      <div>
+        <div class="user-card">
+          <div class="user-avatar">나</div>
+          <div class="user-name">나활동</div>
+          <div class="user-handle">@naactive_99</div>
+          <span class="user-level level-active">● ACTIVE</span>
+        </div>
+        <div class="sidebar-nav">
+          <div class="sidebar-nav-item active" onclick="showMyTab('joined',this)">🎯 참가한 벙</div>
+          <div class="sidebar-nav-item" onclick="showMyTab('history',this)">💳 정산 내역</div>
+          <div class="sidebar-nav-item" onclick="showMyTab('created',this)">📋 개설한 벙</div>
+          <div class="sidebar-nav-item" onclick="showMyTab('profile',this)">⚙️ 프로필</div>
+        </div>
+      </div>
+      <div>
+        <div class="tab-content active" id="tab-joined">
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;font-family:var(--font-mono);color:var(--neon);letter-spacing:1px">// 참가한 벙</h3>
+          <div class="info-grid">
+            <div class="info-box"><div class="info-num">14</div><div class="info-label">TOTAL</div></div>
+            <div class="info-box"><div class="info-num">12</div><div class="info-label">ATTENDED</div></div>
+            <div class="info-box"><div class="info-num">0</div><div class="info-label">WARNINGS</div></div>
+          </div>
+          <div class="history-list">
+            <div class="history-item">
+              <div><div class="history-name">한강 치맥 벙 🍺🍗</div><div class="history-date">2026.05.10 18:00 · 여의도 한강공원</div></div>
+              <div style="text-align:right"><span class="badge badge-open" style="font-size:10px">CONFIRMED</span><div style="font-size:11px;color:var(--ink-3);margin-top:5px;font-family:var(--font-mono)">D-10</div></div>
+            </div>
+            <div class="history-item">
+              <div><div class="history-name">보드게임 카페 초고수 모집 🎲</div><div class="history-date">2026.04.25 19:00 · 홍대</div></div>
+              <div style="text-align:right"><span class="badge badge-closed" style="font-size:10px">ATTENDED</span></div>
+            </div>
+            <div class="history-item">
+              <div><div class="history-name">성수 팝업 스토어 탐방 🛍️</div><div class="history-date">2026.04.20 15:00 · 성수동</div></div>
+              <div style="text-align:right"><span class="badge badge-closed" style="font-size:10px">ATTENDED</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-history">
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;font-family:var(--font-mono);color:var(--neon);letter-spacing:1px">// 정산 내역</h3>
+          <div class="info-grid">
+            <div class="info-box"><div class="info-num">₩87K</div><div class="info-label">TOTAL PAID</div></div>
+            <div class="info-box"><div class="info-num">12</div><div class="info-label">SETTLED</div></div>
+            <div class="info-box"><div class="info-num">1</div><div class="info-label">PENDING</div></div>
+          </div>
+          <div class="history-list">
+            <div class="history-item">
+              <div><div class="history-name">한강 치맥 벙</div><div class="history-date">2026.05.10 예정</div></div>
+              <div style="text-align:right"><div class="history-amount">₩15,000</div><div style="margin-top:4px"><span class="tag-pending">PENDING</span></div></div>
+            </div>
+            <div class="history-item">
+              <div><div class="history-name">보드게임 카페 벙</div><div class="history-date">2026.04.25 완료</div></div>
+              <div style="text-align:right"><div class="history-amount">₩12,000</div><div style="margin-top:4px"><span class="tag-paid">PAID</span></div></div>
+            </div>
+            <div class="history-item">
+              <div><div class="history-name">성수 팝업 탐방</div><div class="history-date">2026.04.20 완료</div></div>
+              <div style="text-align:right"><div class="history-amount">₩8,500</div><div style="margin-top:4px"><span class="tag-paid">PAID</span></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-created">
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;font-family:var(--font-mono);color:var(--neon);letter-spacing:1px">// 개설한 벙</h3>
+          <div class="empty">
+            <div class="empty-icon">📭</div>
+            <div class="empty-title">아직 개설한 벙이 없어요</div>
+            <div class="empty-text">> 첫 번째 벙을 만들어 보세요</div>
+            <button class="btn-sm btn-primary" onclick="showPage('create')" style="margin-top:12px">+ CREATE_BUNG</button>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-profile">
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;font-family:var(--font-mono);color:var(--neon);letter-spacing:1px">// 프로필 설정</h3>
+          <div class="panel">
+            <div class="form-group"><label class="form-label">닉네임</label><input class="form-input" type="text" value="나활동"></div>
+            <div class="form-group"><label class="form-label">핸들</label><input class="form-input" type="text" value="naactive_99"></div>
+            <div class="form-group"><label class="form-label">자기소개</label><textarea class="form-textarea">오프라인 모임 좋아하는 평범한 직장인입니다 :)</textarea></div>
+            <button class="btn-submit" style="width:100%;padding:12px" onclick="showToast('프로필이 저장되었습니다!', 'success')">SAVE_PROFILE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ████ ADMIN PAGE ████ -->
+<div class="page" id="page-admin">
+  <div class="container">
+    <div class="admin-layout">
+      <h2 class="admin-title">관리자 <em>패널</em></h2>
+      <p class="admin-sub">> COMMUNITY MANAGEMENT SYSTEM — 멤버 관리 · 경고 처리 · 신고 처리</p>
+
+      <div class="admin-summary">
+        <div class="info-box"><div class="info-num" style="color:var(--ink)">1,248</div><div class="info-label">TOTAL_MEMBERS</div></div>
+        <div class="info-box"><div class="info-num">7</div><div class="info-label">WARN_PENDING</div></div>
+        <div class="info-box"><div class="info-num" style="color:var(--neon-red);text-shadow:0 0 8px rgba(255,59,92,0.5)">3</div><div class="info-label">REPORTS</div></div>
+        <div class="info-box"><div class="info-num" style="color:var(--ink-3)">12</div><div class="info-label">INACTIVE</div></div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="showAdminTab('users',this)">👥 MEMBERS</button>
+        <button class="admin-tab" onclick="showAdminTab('reports',this)">🚨 REPORTS</button>
+        <button class="admin-tab" onclick="showAdminTab('inactivity',this)">😴 INACTIVE</button>
+      </div>
+
+      <div class="admin-tab-content active" id="atab-users">
+        <div class="data-table">
+          <div class="table-head users-grid"><div></div><div>MEMBER</div><div>EMAIL</div><div>LEVEL</div><div>WARNINGS</div><div>ACTIONS</div></div>
+          <div class="table-row users-grid">
+            <div class="table-avatar">김</div>
+            <div><div style="font-size:13px;font-weight:600">김철수</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">@cheolsu_k</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">cheol@email.com</div>
+            <div><span class="badge badge-open" style="font-size:10px">ACTIVE</span></div>
+            <div><span class="warn-badge warn-0">WARN_0</span></div>
+            <div class="table-actions"><button class="action-btn warn" onclick="showToast('경고가 부여되었습니다', 'error')">WARN</button><button class="action-btn ban" onclick="showModal('ban','김철수')">BAN</button></div>
+          </div>
+          <div class="table-row users-grid">
+            <div class="table-avatar">이</div>
+            <div><div style="font-size:13px;font-weight:600">이민지</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">@minji_lee</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">minji@email.com</div>
+            <div><span class="badge badge-open" style="font-size:10px">ACTIVE</span></div>
+            <div><span class="warn-badge warn-1">WARN_1</span></div>
+            <div class="table-actions"><button class="action-btn warn" onclick="showToast('경고가 부여되었습니다', 'error')">WARN</button><button class="action-btn ban" onclick="showModal('ban','이민지')">BAN</button></div>
+          </div>
+          <div class="table-row users-grid">
+            <div class="table-avatar">박</div>
+            <div><div style="font-size:13px;font-weight:600">박정우</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">@jungwoo_p</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">jungwoo@email.com</div>
+            <div><span class="badge badge-new" style="font-size:10px">NEW</span></div>
+            <div><span class="warn-badge warn-2">WARN_2</span></div>
+            <div class="table-actions"><button class="action-btn warn" onclick="showToast('경고가 부여되었습니다', 'error')">WARN</button><button class="action-btn ban" onclick="showModal('ban','박정우')">BAN</button></div>
+          </div>
+          <div class="table-row users-grid">
+            <div class="table-avatar" style="color:var(--ink-3);border-color:var(--border-dim)">최</div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--ink-3)">최강퇴</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">@banned_user</div></div>
+            <div style="font-size:12px;color:var(--ink-3);font-family:var(--font-mono)">banned@email.com</div>
+            <div><span class="badge badge-closed" style="font-size:10px">BANNED</span></div>
+            <div><span class="warn-badge warn-ban">BANNED</span></div>
+            <div class="table-actions"><button class="action-btn resolve" onclick="showToast('계정이 복구되었습니다', 'success')">RESTORE</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-tab-content" id="atab-reports">
+        <div class="data-table">
+          <div class="table-head reports-grid"><div>TARGET</div><div>REPORTER</div><div>REASON</div><div>DATE</div><div>ACTIONS</div></div>
+          <div class="table-row reports-grid">
+            <div><div style="font-size:13px;font-weight:600">이민지</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">한강 치맥 벙</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">김철수</div>
+            <div><span class="badge badge-hot" style="font-size:10px">NO_SHOW</span></div>
+            <div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">2026.04.28</div>
+            <div class="table-actions"><button class="action-btn warn" onclick="showToast('경고 부여됨', 'error')">WARN</button><button class="action-btn resolve" onclick="showToast('해결 처리됨', 'success')">RESOLVE</button></div>
+          </div>
+          <div class="table-row reports-grid">
+            <div><div style="font-size:13px;font-weight:600">박정우</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">보드게임 벙</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">최서연</div>
+            <div><span class="badge badge-full" style="font-size:10px">UNAUTH</span></div>
+            <div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">2026.04.26</div>
+            <div class="table-actions"><button class="action-btn warn" onclick="showToast('경고 부여됨', 'error')">WARN</button><button class="action-btn ban" onclick="showModal('ban','박정우')">BAN</button><button class="action-btn resolve" onclick="showToast('해결 처리됨', 'success')">OK</button></div>
+          </div>
+          <div class="table-row reports-grid">
+            <div><div style="font-size:13px;font-weight:600">정다은</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">정산 미완료</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">SYS_AUTO</div>
+            <div><span class="badge" style="border:1px solid rgba(255,59,92,0.5);color:var(--neon-red);font-size:10px;padding:3px 9px;border-radius:2px;font-family:var(--font-mono)">48H_OVER</span></div>
+            <div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">2026.04.22</div>
+            <div class="table-actions"><button class="action-btn warn" onclick="showToast('경고 부여됨', 'error')">WARN</button><button class="action-btn resolve" onclick="showToast('해결 처리됨', 'success')">RESOLVE</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-tab-content" id="atab-inactivity">
+        <div style="border:1px solid rgba(245,224,0,0.3);background:rgba(245,224,0,0.05);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--neon);font-family:var(--font-mono)">
+          ⚠️ 2개월 이상 미활동 멤버입니다. 알림 발송 또는 비활성화 처리를 진행하세요.
+        </div>
+        <div class="data-table">
+          <div class="table-head inactivity-grid"><div>MEMBER</div><div>LAST_ACTIVE</div><div>INACTIVE</div><div>HISTORY</div><div>ACTIONS</div></div>
+          <div class="table-row inactivity-grid">
+            <div><div style="font-size:13px;font-weight:600">홍길동</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">@hong_gd</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">2026.02.14</div>
+            <div><span class="warn-badge warn-2" style="font-size:10px">75_DAYS</span></div>
+            <div style="font-size:12px;color:var(--ink-3);font-family:var(--font-mono)">3회 참가</div>
+            <div class="table-actions"><button class="action-btn" onclick="showToast('알림 발송됨', 'info')">NOTIFY</button><button class="action-btn ban" onclick="showToast('비활성화 처리됨', 'error')">DEACTIVATE</button></div>
+          </div>
+          <div class="table-row inactivity-grid">
+            <div><div style="font-size:13px;font-weight:600">임꺽정</div><div style="font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">@lim_kj</div></div>
+            <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-mono)">2026.01.30</div>
+            <div><span class="warn-badge warn-2" style="font-size:10px">90_DAYS</span></div>
+            <div style="font-size:12px;color:var(--ink-3);font-family:var(--font-mono)">1회 참가</div>
+            <div class="table-actions"><button class="action-btn" onclick="showToast('알림 발송됨', 'info')">NOTIFY</button><button class="action-btn ban" onclick="showToast('비활성화 처리됨', 'error')">DEACTIVATE</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">// BAN_CONFIRM</div>
+    <div class="modal-body" id="modalBody">이 멤버를 커뮤니티에서 영구 강퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">CANCEL</button>
+      <button class="btn-submit" onclick="confirmModal()">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('page-'+id).classList.add('active');
+    const map={home:0,list:1,create:2,mypage:3,admin:4};
+    if(map[id]!==undefined) document.querySelectorAll('.nav-tab')[map[id]]?.classList.add('active');
+    window.scrollTo(0,0);
+  }
+  function closeBanner(){document.getElementById('banner').style.display='none';document.body.classList.remove('banner-on');}
+  function openMobileMenu(){document.getElementById('mobileMenu').classList.add('open');}
+  function closeMobileMenu(){document.getElementById('mobileMenu').classList.remove('open');}
+  function setFilter(el){el.closest('.filter-bar').querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');}
+  function showMyTab(id,el){document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.sidebar-nav-item').forEach(i=>i.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');el.classList.add('active');}
+  function showAdminTab(id,el){document.querySelectorAll('.admin-tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));document.getElementById('atab-'+id).classList.add('active');el.classList.add('active');}
+
+  let isAttending=false;
+  function toggleAttend(){
+    isAttending=!isAttending;
+    const btn=document.getElementById('attendBtn');
+    if(isAttending){btn.textContent='✅ 출석 확정됨';btn.classList.add('attending');showToast('출석이 확정되었습니다! 정산을 잊지 마세요','success');}
+    else{btn.textContent='✋ 출석 확정';btn.classList.remove('attending');showToast('출석 확정이 취소되었습니다','info');}
+  }
+
+  function addComment(){
+    const input=document.getElementById('commentInput');
+    const text=input.value.trim();
+    if(!text){showToast('댓글을 입력하세요','error');return;}
+    const list=document.querySelector('.comment-list');
+    const el=document.createElement('div');
+    el.className='comment';
+    el.innerHTML=`<div class="c-avatar" style="background:var(--neon-dim);color:var(--neon);border-color:var(--border)">나</div><div class="c-body"><div class="c-header"><span class="c-name">나활동</span><span class="c-time">NOW</span></div><div class="c-text">${text.replace(/</g,'&lt;')}</div></div>`;
+    list.appendChild(el);
+    input.value='';
+    showToast('댓글이 등록되었습니다','success');
+  }
+
+  function createMeetup(){showToast('⚡ 벙이 성공적으로 개설되었습니다!','success');setTimeout(()=>showPage('list'),1200);}
+
+  function showToast(msg,type='info'){
+    const c=document.getElementById('toastContainer');
+    const icons={success:'✓',error:'✕',info:'!'};
+    const el=document.createElement('div');
+    el.className=`toast ${type}`;
+    el.innerHTML=`<span style="font-family:var(--font-mono);font-weight:700">[${icons[type]}]</span><span>${msg}</span>`;
+    c.appendChild(el);
+    setTimeout(()=>el.remove(),3200);
+  }
+
+  function showModal(action,name){
+    document.getElementById('modalBody').textContent=`"${name}" 멤버를 커뮤니티에서 영구 강퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+  function confirmModal(){closeModal();showToast('해당 멤버가 강퇴 처리되었습니다','error');}
+
+  document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape')closeModal();
+    if(e.key==='Enter'&&document.activeElement.id==='commentInput')addComment();
+  });
+</script>
+</body>
+</html>
